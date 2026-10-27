@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
-import { AuthProvider, useAuth } from '../context/AuthContext';
+import React, { useState, useEffect } from 'react';
+import { useAuthStore } from '../store/useAuthStore';
+import { useTicketStore } from '../store/useTicketStore';
 import { Navbar } from '../components/Navbar';
 import { AuthorPortal } from '../components/AuthorPortal';
 import { AdminPortal } from '../components/AdminPortal';
@@ -9,17 +10,22 @@ import { useSSE, SSEEvent } from '../hooks/useSSE';
 import { DEMO_USERS } from '../lib/constants';
 
 function PortalContent() {
-  const { user, login, loading } = useAuth();
+  const { user, login, loading } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sseTriggerCount, setSseTriggerCount] = useState(0);
 
+  useEffect(() => {
+    useAuthStore.getState().initialize();
+  }, []);
+
   // Real-time SSE hook
   const { connected, isPollingFallback } = useSSE((event: SSEEvent) => {
     // Whenever an SSE event arrives (new ticket, updated ticket, new message), increment trigger counter to refresh view
     setSseTriggerCount((c) => c + 1);
+    useTicketStore.getState().triggerRealtimeRefresh();
   });
 
   const handleManualLogin = async (e: React.FormEvent) => {
@@ -188,9 +194,5 @@ function PortalContent() {
 }
 
 export default function Home() {
-  return (
-    <AuthProvider>
-      <PortalContent />
-    </AuthProvider>
-  );
+  return <PortalContent />;
 }

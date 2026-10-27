@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuthStore } from '../store/useAuthStore';
 import { DEMO_USERS } from '../lib/constants';
 
 interface NavbarProps {
@@ -10,7 +10,7 @@ interface NavbarProps {
 }
 
 export function Navbar({ connected, isPollingFallback }: NavbarProps) {
-  const { user, logout, switchUser } = useAuth();
+  const { user, logout, switchUser } = useAuthStore();
   const [showSwitcher, setShowSwitcher] = useState(false);
 
   return (

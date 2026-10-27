@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuthStore } from '../store/useAuthStore';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
@@ -11,7 +11,7 @@ export interface SSEEvent {
 }
 
 export function useSSE(onEvent?: (event: SSEEvent) => void) {
-  const { token } = useAuth();
+  const token = useAuthStore((s) => s.token);
   const [connected, setConnected] = useState(false);
   const [isPollingFallback, setIsPollingFallback] = useState(false);
   const eventSourceRef = useRef<EventSource | null>(null);
