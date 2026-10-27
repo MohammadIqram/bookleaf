@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
 import { TicketDetailModal } from './TicketDetailModal';
 import { TICKET_CATEGORIES, TICKET_PRIORITIES, TICKET_STATUSES } from '../lib/constants';
+import { useTicketStore } from '../store/useTicketStore';
 
 interface AdminPortalProps {
   currentUserId: string;
@@ -26,9 +27,12 @@ export function AdminPortal({ currentUserId }: AdminPortalProps) {
   // Detail Modal
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
 
-  const loadData = async () => {
+  // Subscribe to real-time SSE trigger counter
+  const sseTriggerCount = useTicketStore((s) => s.sseTriggerCount);
+
+  const loadData = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const [statsRes, ticketsRes] = await Promise.all([
         api.getAdminStats(),
         api.getTickets({
@@ -48,13 +52,19 @@ export function AdminPortal({ currentUserId }: AdminPortalProps) {
     } catch (err) {
       console.error('Failed to load admin queue data:', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  };
+  }, [page, status, category, priority, assignedTo, search]);
 
   useEffect(() => {
-    loadData();
-  }, [page, status, category, priority, assignedTo, search]);
+    loadData(false);
+  }, [loadData]);
+
+  useEffect(() => {
+    if (sseTriggerCount > 0) {
+      loadData(true);
+    }
+  }, [sseTriggerCount, loadData]);
 
   return (
     <div className="space-y-6">

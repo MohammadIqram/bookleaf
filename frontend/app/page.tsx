@@ -180,9 +180,9 @@ function PortalContent() {
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {user.role === 'ADMIN' ? (
-          <AdminPortal key={`admin-${sseTriggerCount}`} currentUserId={user.id} />
+          <AdminPortal currentUserId={user.id} />
         ) : (
-          <AuthorPortal key={`author-${sseTriggerCount}`} currentUserId={user.id} />
+          <AuthorPortal currentUserId={user.id} />
         )}
       </main>
 

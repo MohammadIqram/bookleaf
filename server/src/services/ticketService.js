@@ -100,8 +100,6 @@ export class TicketService {
       search,
       assignedTo,
       authorId,
-      sortBy = 'priority',
-      sortOrder = 'desc',
     } = filters;
 
     const skip = (page - 1) * limit;
@@ -137,10 +135,13 @@ export class TicketService {
       ];
     }
 
-    // 4. Default Sort for Admin: Priority (Critical first) then oldest created first
+    const isAuthor = user.role === 'AUTHOR';
+    const sortBy = filters.sortBy || (isAuthor ? 'createdAt' : 'priority');
+    const sortOrder = filters.sortOrder || (isAuthor ? 'desc' : 'asc');
+
+    // 4. Default Sort: Authors see newest first; Admins see priority (Critical first) then oldest created first
     let orderBy = [];
-    if (sortBy === 'priority') {
-      // Prisma order for priority enum + oldest created first
+    if (sortBy === 'priority' && !isAuthor) {
       orderBy = [{ createdAt: 'asc' }];
     } else {
       orderBy = [{ [sortBy]: sortOrder }];
@@ -181,9 +182,9 @@ export class TicketService {
     // Priority rank mapping for client sorting
     const priorityWeight = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
 
-    // Sort by priority weight if requested
+    // Sort by priority weight if requested (Admin queue)
     let sortedTickets = rawTickets;
-    if (sortBy === 'priority') {
+    if (sortBy === 'priority' && !isAuthor) {
       sortedTickets = [...rawTickets].sort((a, b) => {
         const weightDiff = (priorityWeight[b.priority] || 0) - (priorityWeight[a.priority] || 0);
         if (weightDiff !== 0) return weightDiff;

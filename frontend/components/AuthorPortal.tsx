@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
 import { SubmitTicketModal } from './SubmitTicketModal';
 import { TicketDetailModal } from './TicketDetailModal';
+import { useTicketStore } from '../store/useTicketStore';
 
 interface AuthorPortalProps {
   currentUserId: string;
@@ -14,14 +15,18 @@ export function AuthorPortal({ currentUserId }: AuthorPortalProps) {
   const [books, setBooks] = useState<any[]>([]);
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [successNotice, setSuccessNotice] = useState<string | null>(null);
 
   // Modals
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
 
-  const loadData = async () => {
+  // Subscribe to real-time SSE trigger counter without unmounting
+  const sseTriggerCount = useTicketStore((s) => s.sseTriggerCount);
+
+  const loadData = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const [booksRes, ticketsRes] = await Promise.all([
         api.getBooks(),
         api.getTickets({ limit: 50 }),
@@ -31,18 +36,38 @@ export function AuthorPortal({ currentUserId }: AuthorPortalProps) {
     } catch (err) {
       console.error('Error loading author data:', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadData();
   }, []);
 
+  // Initial load
+  useEffect(() => {
+    loadData(false);
+  }, [loadData]);
+
+  // Silent background refresh on real-time SSE updates
+  useEffect(() => {
+    if (sseTriggerCount > 0) {
+      loadData(true);
+    }
+  }, [sseTriggerCount, loadData]);
+
   const handleTicketCreated = (newTicket: any) => {
-    setTickets((prev) => [newTicket, ...prev]);
+    // 1. Immediately reflect the ticket in the state (prepended at top)
+    setTickets((prev) => {
+      const exists = prev.some((t) => t.id === newTicket.id || t.ticketNumber === newTicket.ticketNumber);
+      return exists ? prev : [newTicket, ...prev];
+    });
+
+    // 2. Automatically switch to the "My Support Queries" tab so author sees it instantly
     setActiveTab('tickets');
+
+    // 3. Open ticket thread modal immediately
     setSelectedTicketId(newTicket.id);
+
+    // 4. Show success banner
+    setSuccessNotice(`Support Query ${newTicket.ticketNumber || ''} created successfully! Our team is reviewing it.`);
+    setTimeout(() => setSuccessNotice(null), 8000);
   };
 
   return (
@@ -57,17 +82,33 @@ export function AuthorPortal({ currentUserId }: AuthorPortalProps) {
         </div>
         <button
           onClick={() => setIsSubmitModalOpen(true)}
-          className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-emerald-900/40 transition flex items-center gap-2 shrink-0"
+          className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-emerald-900/40 transition flex items-center gap-2 shrink-0 cursor-pointer"
         >
           <span>✍️ Submit Support Query</span>
         </button>
       </div>
 
+      {/* Success Notification Alert */}
+      {successNotice && (
+        <div className="bg-emerald-950/80 border border-emerald-700/60 text-emerald-200 px-4 py-3 rounded-xl text-xs flex items-center justify-between animate-in fade-in duration-300">
+          <div className="flex items-center gap-2">
+            <span className="text-base">✅</span>
+            <span className="font-medium">{successNotice}</span>
+          </div>
+          <button
+            onClick={() => setSuccessNotice(null)}
+            className="text-emerald-400 hover:text-white transition font-bold text-sm px-2"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex items-center gap-6 border-b border-slate-800 text-sm font-semibold">
         <button
           onClick={() => setActiveTab('books')}
-          className={`pb-3 transition border-b-2 flex items-center gap-2 ${
+          className={`pb-3 transition border-b-2 flex items-center gap-2 cursor-pointer ${
             activeTab === 'books'
               ? 'border-emerald-500 text-emerald-400'
               : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -78,14 +119,16 @@ export function AuthorPortal({ currentUserId }: AuthorPortalProps) {
         </button>
         <button
           onClick={() => setActiveTab('tickets')}
-          className={`pb-3 transition border-b-2 flex items-center gap-2 ${
+          className={`pb-3 transition border-b-2 flex items-center gap-2 cursor-pointer ${
             activeTab === 'tickets'
               ? 'border-emerald-500 text-emerald-400'
               : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
           <span>🎫 My Support Queries</span>
-          <span className="text-xs bg-slate-800 px-2 py-0.5 rounded-full text-slate-300">{tickets.length}</span>
+          <span className="text-xs bg-emerald-900/60 border border-emerald-700/60 text-emerald-300 px-2.5 py-0.5 rounded-full font-bold">
+            {tickets.length}
+          </span>
         </button>
       </div>
 
@@ -94,7 +137,31 @@ export function AuthorPortal({ currentUserId }: AuthorPortalProps) {
         <div className="p-16 text-center text-slate-400 text-sm">Loading author records...</div>
       ) : activeTab === 'books' ? (
         /* View: My Books */
-        <div className="space-y-4">
+        <div className="space-y-6">
+          {/* Quick Notice: Active Support Queries Strip on Books view */}
+          {tickets.length > 0 && (
+            <div className="bg-slate-900/90 border border-slate-800 p-4 rounded-xl flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span className="text-xl">🎫</span>
+                <div>
+                  <div className="text-xs font-semibold text-white">
+                    You have {tickets.length} support {tickets.length === 1 ? 'query' : 'queries'} on file
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">
+                    Latest: <span className="font-mono text-emerald-400">{tickets[0]?.ticketNumber}</span> -{' '}
+                    {tickets[0]?.subject} ({tickets[0]?.status})
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setActiveTab('tickets')}
+                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 hover:text-emerald-300 rounded-lg text-xs font-medium border border-slate-700 transition shrink-0 cursor-pointer"
+              >
+                View Support Queries ➔
+              </button>
+            </div>
+          )}
+
           {books.length === 0 ? (
             <div className="p-12 text-center text-slate-500 border border-dashed border-slate-800 rounded-2xl">
               No books currently registered under this author profile.
@@ -204,6 +271,10 @@ export function AuthorPortal({ currentUserId }: AuthorPortalProps) {
                     )}
                   </div>
                   <p className="text-xs text-slate-400 line-clamp-1">{t.description}</p>
+                  <div className="text-[11px] text-slate-500">
+                    Created: {new Date(t.createdAt).toLocaleDateString()} at{' '}
+                    {new Date(t.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-3 shrink-0">
@@ -238,7 +309,7 @@ export function AuthorPortal({ currentUserId }: AuthorPortalProps) {
         ticketId={selectedTicketId}
         onClose={() => {
           setSelectedTicketId(null);
-          loadData();
+          loadData(true);
         }}
         isAdmin={false}
         currentUserId={currentUserId}
