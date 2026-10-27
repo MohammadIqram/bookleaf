@@ -3,10 +3,11 @@ import { env } from '../../config/env.js';
 import logger from '../../utils/logger.js';
 
 export class OpenAIProvider extends LLMProvider {
-  constructor(apiKey = env.OPENAI_API_KEY, model = env.OPENAI_MODEL) {
+  constructor(apiKey = env.OPENAI_API_KEY, model = env.OPENAI_MODEL, baseUrl = env.OPENAI_BASE_URL) {
     super();
     this.apiKey = apiKey;
     this.model = model || 'gpt-4o-mini';
+    this.baseUrl = (baseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '');
   }
 
   async complete({ system, messages, maxTokens = 500, temperature = 0, json = false }) {
@@ -44,11 +45,13 @@ export class OpenAIProvider extends LLMProvider {
       const timeout = setTimeout(() => controller.abort(), 15000);
 
       try {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        const response = await fetch(`${this.baseUrl}/chat/completions`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${this.apiKey}`,
+            'HTTP-Referer': 'https://bookleaf.com',
+            'X-Title': 'BookLeaf Author Support Portal',
           },
           body: JSON.stringify(payload),
           signal: controller.signal,

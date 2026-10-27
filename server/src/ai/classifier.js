@@ -56,17 +56,23 @@ export class Classifier {
       aiCircuitBreaker.recordSuccess();
 
       // Log AI Usage
-      await prisma.aiUsageLog.create({
-        data: {
-          ticketId: ticket.id,
-          task: 'classify',
-          model: response.model,
-          tokensIn: response.tokensIn,
-          tokensOut: response.tokensOut,
-          latencyMs: response.latencyMs,
-          success: true,
-        },
-      });
+      try {
+        if (ticket.id) {
+          await prisma.aiUsageLog.create({
+            data: {
+              ticketId: ticket.id,
+              task: 'classify',
+              model: response.model,
+              tokensIn: response.tokensIn,
+              tokensOut: response.tokensOut,
+              latencyMs: response.latencyMs,
+              success: true,
+            },
+          });
+        }
+      } catch (_logErr) {
+        // Silently continue if audit log insert encounters network hiccup
+      }
 
       const parsedJson = JSON.parse(response.content);
       const validated = classifierOutputSchema.parse(parsedJson);

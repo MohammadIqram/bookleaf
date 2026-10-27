@@ -33,6 +33,7 @@ const envSchema = z.object({
   ANTHROPIC_MODEL: z.string().default('claude-3-haiku-20240307'),
   OPENAI_API_KEY: z.string().optional().default(''),
   OPENAI_MODEL: z.string().default('gpt-4o-mini'),
+  OPENAI_BASE_URL: z.string().default('https://api.openai.com/v1'),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
