@@ -1,0 +1,210 @@
+// Prisma Schema for BookLeaf Author Support & Communication Portal
+// Database: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  AUTHOR
+  ADMIN
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum Priority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum SourceType {
+  AI
+  ADMIN
+  RULES
+}
+
+enum AiStatus {
+  PENDING
+  DONE
+  FAILED
+}
+
+enum SenderType {
+  AUTHOR
+  ADMIN
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  role         Role      @default(AUTHOR)
+  name         String
+  createdAt    DateTime  @default(now())
+
+  // Relations
+  author           Author?
+  assignedTickets  Ticket[]        @relation("AssignedAdmin")
+  ticketMessages   TicketMessage[]
+  internalNotes    InternalNote[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Author {
+  id         String   @id @default(uuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  authorCode String   @unique
+  name       String
+  phone      String
+  city       String
+  joinedDate DateTime
+
+  // Relations
+  books   Book[]
+  tickets Ticket[]
+
+  @@index([userId])
+  @@index([authorCode])
+}
+
+model Book {
+  id                  String    @id @default(uuid())
+  bookCode            String    @unique
+  authorId            String
+  author              Author    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  title               String
+  isbn                String
+  genre               String
+  publicationDate     DateTime?
+  status              String
+  mrp                 Float?
+  royaltyPerCopy      Float?
+  totalCopiesSold     Int       @default(0)
+  totalRoyaltyEarned  Float     @default(0)
+  royaltyPaid         Float     @default(0)
+  royaltyPending      Float     @default(0)
+  lastPayoutDate      DateTime?
+  printPartner        String?
+  availableOn         String[]  @default([])
+
+  // Relations
+  tickets Ticket[]
+
+  @@index([authorId])
+  @@index([isbn])
+  @@index([bookCode])
+}
+
+model Ticket {
+  id                    String        @id @default(uuid())
+  ticketNumber          String        @unique
+  authorId              String
+  author                Author        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  bookId                String?
+  book                  Book?         @relation(fields: [bookId], references: [id], onDelete: SetNull)
+  subject               String
+  description           String        @db.Text
+  status                TicketStatus  @default(OPEN)
+  category              String?
+  categorySource        SourceType?
+  priority              Priority      @default(MEDIUM)
+  prioritySource        SourceType    @default(RULES)
+  aiClassificationStatus AiStatus     @default(PENDING)
+  aiReasoning           String?       @db.Text
+  assignedAdminId       String?
+  assignedAdmin         User?         @relation("AssignedAdmin", fields: [assignedAdminId], references: [id], onDelete: SetNull)
+  attachmentNames       String[]      @default([])
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  resolvedAt            DateTime?
+
+  // Relations
+  messages      TicketMessage[]
+  internalNotes InternalNote[]
+  aiDrafts      AiDraft[]
+  aiUsageLogs   AiUsageLog[]
+
+  @@index([authorId])
+  @@index([bookId])
+  @@index([status])
+  @@index([priority])
+  @@index([category])
+  @@index([assignedAdminId])
+  @@index([createdAt])
+}
+
+model TicketMessage {
+  id             String     @id @default(uuid())
+  ticketId       String
+  ticket         Ticket     @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  senderType     SenderType
+  senderId       String
+  sender         User       @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  body           String     @db.Text
+  isAiDraftBased Boolean    @default(false)
+  createdAt      DateTime   @default(now())
+
+  @@index([ticketId, createdAt])
+  @@index([senderId])
+}
+
+model InternalNote {
+  id        String   @id @default(uuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  adminId   String
+  admin     User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([ticketId, createdAt])
+  @@index([adminId])
+}
+
+model AiDraft {
+  id            String   @id @default(uuid())
+  ticketId      String
+  ticket        Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  body          String   @db.Text
+  model         String
+  promptVersion String
+  inputHash     String
+  tokensIn      Int
+  tokensOut     Int
+  createdAt     DateTime @default(now())
+
+  @@index([ticketId])
+  @@index([inputHash])
+}
+
+model AiUsageLog {
+  id        String   @id @default(uuid())
+  ticketId  String?
+  ticket    Ticket?  @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  task      String
+  model     String
+  tokensIn  Int
+  tokensOut Int
+  latencyMs Int
+  success   Boolean
+  errorType String?
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+  @@index([task])
+  @@index([createdAt])
+}

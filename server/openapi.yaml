@@ -1,0 +1,427 @@
+openapi: 3.0.3
+info:
+  title: BookLeaf Author Support & Communication Portal API
+  version: 1.0.0
+  description: |
+    Production-grade RESTful API for BookLeaf Publishing author support, ticket triage, 
+    real-time event streaming (SSE), and LLM-assisted classification and drafting.
+servers:
+  - url: http://localhost:5000/api/v1
+    description: Local Development Server
+  - url: https://api.bookleaf.com/api/v1
+    description: Production API Gateway
+
+tags:
+  - name: Auth
+    description: Authentication & session endpoints
+  - name: Books
+    description: Catalog, royalty, and metadata endpoints
+  - name: Tickets
+    description: Support ticket queries, conversation thread, and management
+  - name: Admin
+    description: Administrative queue statistics and operations
+  - name: Events
+    description: Server-Sent Events (SSE) real-time event streaming
+
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: User Login
+      description: Authenticates user credentials and issues a signed JWT token and httpOnly cookie.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: ananya.reddy@email.com
+                password:
+                  type: string
+                  example: Author@123
+      responses:
+        200:
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  token: { type: string }
+                  user:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      email: { type: string }
+                      name: { type: string }
+                      role: { type: string, enum: [ADMIN, AUTHOR] }
+                      author: { type: object, nullable: true }
+        401:
+          description: Invalid email or password
+        422:
+          description: Validation error
+        429:
+          description: Rate limit exceeded
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: User Logout
+      description: Clears session cookie and invalidates client session.
+      responses:
+        200:
+          description: Logged out successfully
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Current User Profile
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: User profile details
+        401:
+          description: Unauthorized
+
+  /books:
+    get:
+      tags: [Books]
+      summary: List Books
+      description: Returns author's own books (if AUTHOR) or all catalog books (if ADMIN, with optional authorId filter).
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: authorId
+          schema: { type: string, format: uuid }
+          description: Filter books by author ID (admin only)
+      responses:
+        200:
+          description: List of books with financial accruals and in-production indicators
+
+  /books/{id}:
+    get:
+      tags: [Books]
+      summary: Get Book by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        200:
+          description: Book record details
+        404:
+          description: Book not found or access denied
+
+  /tickets:
+    get:
+      tags: [Tickets]
+      summary: List Tickets
+      description: Retrieves tickets for author (own only) or admin queue (all, with filters).
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+        - in: query
+          name: status
+          schema: { type: string, enum: [OPEN, IN_PROGRESS, RESOLVED, CLOSED] }
+        - in: query
+          name: category
+          schema:
+            type: string
+            enum:
+              - Royalty & Payments
+              - ISBN & Metadata Issues
+              - Printing & Quality
+              - Distribution & Availability
+              - Book Status & Production Updates
+              - General Inquiry
+        - in: query
+          name: priority
+          schema: { type: string, enum: [CRITICAL, HIGH, MEDIUM, LOW] }
+        - in: query
+          name: search
+          schema: { type: string }
+        - in: query
+          name: assignedTo
+          schema: { type: string, enum: [me, unassigned] }
+      responses:
+        200:
+          description: Paginated tickets list
+
+    post:
+      tags: [Tickets]
+      summary: Submit Support Query (Author)
+      description: Creates a support query immediately (HTTP 201). AI classification & triage run asynchronously.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subject, description]
+              properties:
+                subject:
+                  type: string
+                  minLength: 5
+                  maxLength: 150
+                  example: Inquiring about Between Two Temples quarterly royalty payout
+                description:
+                  type: string
+                  minLength: 20
+                  maxLength: 5000
+                  example: Hello BookLeaf team, my dashboard shows 67 copies sold and pending balance of Rs. 2,546...
+                bookId:
+                  type: string
+                  format: uuid
+                  nullable: true
+                attachmentNames:
+                  type: array
+                  items: { type: string }
+      responses:
+        201:
+          description: Ticket created successfully
+        400:
+          description: Invalid book selection or bad input
+        422:
+          description: Validation error
+
+  /tickets/{id}:
+    get:
+      tags: [Tickets]
+      summary: Get Ticket Details
+      description: Returns conversation thread. Authors receive sanitized ticket without internal notes or AI metadata.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        200:
+          description: Ticket details and conversation thread
+        404:
+          description: Ticket not found or access denied
+
+    patch:
+      tags: [Tickets]
+      summary: Update Ticket (Admin)
+      description: Allows admins to override status, category, priority, or assignee.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: string, enum: [OPEN, IN_PROGRESS, RESOLVED, CLOSED] }
+                category: { type: string }
+                priority: { type: string, enum: [CRITICAL, HIGH, MEDIUM, LOW] }
+                assignedAdminId: { type: string, format: uuid, nullable: true }
+      responses:
+        200:
+          description: Ticket updated successfully
+
+  /tickets/{id}/messages:
+    post:
+      tags: [Tickets]
+      summary: Add Message to Ticket Thread
+      description: Post a follow-up query (Author) or an official resolution reply (Admin).
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body:
+                  type: string
+                  minLength: 2
+                  maxLength: 5000
+                isAiDraftBased:
+                  type: boolean
+                  default: false
+      responses:
+        201:
+          description: Message posted and broadcasted live via SSE
+        400:
+          description: Cannot reply to closed ticket
+
+  /tickets/{id}/assign:
+    post:
+      tags: [Tickets]
+      summary: Assign Ticket (Admin)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                unassign: { type: boolean, default: false }
+      responses:
+        200:
+          description: Assignment updated
+
+  /tickets/{id}/notes:
+    get:
+      tags: [Tickets]
+      summary: Get Internal Notes (Admin Only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        200:
+          description: List of internal notes
+
+    post:
+      tags: [Tickets]
+      summary: Add Internal Note (Admin Only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, minLength: 2, maxLength: 5000 }
+      responses:
+        201:
+          description: Internal note saved
+
+  /tickets/{id}/draft:
+    get:
+      tags: [Tickets]
+      summary: Get AI Response Draft (Admin Only)
+      description: Retrieves cached draft by input hash or generates a new response draft using selective KB injection.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        200:
+          description: Generated AI response draft
+        503:
+          description: AI provider unavailable (code AI_UNAVAILABLE)
+
+  /tickets/{id}/draft/regenerate:
+    post:
+      tags: [Tickets]
+      summary: Force Regenerate AI Draft (Admin Only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        200:
+          description: Freshly generated response draft
+
+  /tickets/{id}/reclassify:
+    post:
+      tags: [Tickets]
+      summary: Trigger AI Reclassification (Admin Only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        200:
+          description: Ticket reclassified
+
+  /admin/stats:
+    get:
+      tags: [Admin]
+      summary: Get Admin Dashboard Metrics
+      description: Returns open counts, critical SLA warnings, average open ticket age, and estimated AI token costs.
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: Operational metric statistics
+
+  /events:
+    get:
+      tags: [Events]
+      summary: Real-Time Server-Sent Events (SSE) Stream
+      description: Persistent SSE stream for ticket updates, creation events, and live messages.
+      parameters:
+        - in: query
+          name: token
+          schema: { type: string }
+          description: Optional JWT query parameter token for browser EventSource client
+      responses:
+        200:
+          description: Event stream established (text/event-stream)
+
+  /health:
+    get:
+      summary: Health Check
+      responses:
+        200:
+          description: Service healthy
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

@@ -1,0 +1,44 @@
+[
+  {
+    "category": "Royalty & Payments",
+    "query": "I published my book 4 months ago and still haven't received any royalty. What's going on?",
+    "responseGuidance": "Acknowledge the frustration. Explain the quarterly cycle and 45-day payout window. Check if bank details are linked. Provide the specific next payout date. If genuinely overdue, escalate with a 48-hour resolution timeline.",
+    "sampleResponse": "Dear [Author Name],\n\nI completely understand your frustration regarding the wait for your royalties, especially four months after publication. Let me clarify how our disbursement cycle works so you know exactly where things stand.\n\nOur royalties are calculated quarterly and distributed within 45 days after the quarter closes. For your publication window, payouts are currently being processed. However, please ensure your bank details and IFSC code are verified in your Author Dashboard under Payout Settings.\n\nI have flagged your account with our finance team to confirm your payout status. We will verify your records and get back to you with an update within 48 hours.\n\nTeam BookLeaf"
+  },
+  {
+    "category": "Royalty & Payments",
+    "query": "My royalty amount seems too low. I sold 200 copies but only received ₹3,000.",
+    "responseGuidance": "Explain net profit calculation (MRP minus printing, platform commission, shipping). Offer a detailed line-by-line royalty breakdown. Don't be defensive; offer transparency.",
+    "sampleResponse": "Dear [Author Name],\n\nThank you for reaching out, and congratulations on selling 200 copies! I understand your concern regarding the payout amount compared to total units sold.\n\nAt BookLeaf, royalties are calculated as 80% of the net profit per copy (MRP minus printing cost, platform commissions like Amazon/Flipkart, and shipping charges) rather than a flat percentage of the retail price.\n\nTo give you complete clarity, I have requested our accounts team to generate a line-by-line royalty breakdown for your 200 sales across all distribution platforms. We will share this report with you within 48 hours.\n\nTeam BookLeaf"
+  },
+  {
+    "category": "ISBN & Metadata Issues",
+    "query": "My book is showing a different ISBN on Amazon than what's on the physical copy.",
+    "responseGuidance": "Treat as high priority. Acknowledge it's a serious data issue. Confirm escalation to the production team immediately. 48-hour resolution timeline.",
+    "sampleResponse": "Dear [Author Name],\n\nThank you for bringing this to our attention immediately. An ISBN mismatch on a live retail platform is a critical data issue, and I understand the urgency in having it corrected.\n\nI have escalated this ticket directly to our production and metadata lead with highest priority. We are cross-referencing our official registry imprint with Amazon's catalog listing to fix the mapping.\n\nOur team is working on this right now, and we will update you on the correction within 48 hours.\n\nTeam BookLeaf"
+  },
+  {
+    "category": "Printing & Quality",
+    "query": "I received my author copies and the print quality is terrible. The images are blurry and pages are misaligned.",
+    "responseGuidance": "Apologise sincerely. Ask for photos of the defective copies. Confirm a free reprint once verified. Timeline of 5–7 business days for the reprint.",
+    "sampleResponse": "Dear [Author Name],\n\nI am truly sorry to hear that your author copies arrived with blurry images and misaligned pages. That falls well below our quality expectations, and I understand your disappointment.\n\nPlease reply to this message with 2 to 3 photos clearly showing the defects (cover, misaligned pages, and blurry graphics). As soon as our production team verifies the defect, we will arrange a complimentary reprint batch delivered to you within 5–7 business days.\n\nWe appreciate your patience while we make this right.\n\nTeam BookLeaf"
+  },
+  {
+    "category": "Distribution & Availability",
+    "query": "My book is published but it's showing as 'Currently Unavailable' on Amazon.",
+    "responseGuidance": "Explain typically a stock sync issue. Confirm triggering a re-sync with the distribution team. Expect 24–48 hours to go live again.",
+    "sampleResponse": "Dear [Author Name],\n\nThank you for alerting us promptly. Seeing your published book listed as 'Currently Unavailable' is concerning, but this is usually a temporary inventory synchronization lag between our warehouse and Amazon's catalog.\n\nOur distribution operations team has just triggered a manual catalog re-sync with Amazon India. Stock counts typically restore and reflect live on the listing within 24–48 hours.\n\nWe will monitor the listing and confirm once the buy button is active again.\n\nTeam BookLeaf"
+  },
+  {
+    "category": "Book Status & Production Updates",
+    "query": "It's been 3 weeks and my book is still in typesetting. When will it be done?",
+    "responseGuidance": "Check actual production status. If delayed, be honest about why. Give a specific updated timeline. Don't blame the author even if the delay is on their side — frame collaboratively.",
+    "sampleResponse": "Dear [Author Name],\n\nThank you for following up, and I appreciate your patience while your book is prepared. I understand you're eager to see your book advance past the typesetting stage.\n\nOur design team has been formatting the interior layout to ensure standard typography and margin compliance. While typesetting typically takes 10 to 14 days, complex formatting or revision checks can sometimes add time.\n\nI have reached out to our typesetting supervisor to fast-track your proof. We will share the complete interior PDF proof for your review within 48 hours.\n\nTeam BookLeaf"
+  },
+  {
+    "category": "General Inquiry",
+    "query": "Can I update the description of my book on Amazon after it's already live?",
+    "responseGuidance": "Yes, metadata updates can be submitted through the dashboard or by emailing the BookLeaf team. Changes reflect on platforms within 3–5 business days.",
+    "sampleResponse": "Dear [Author Name],\n\nYes, absolutely! You can update your book's description and blurb even after it is published and live.\n\nYou can submit updated metadata directly through your Author Dashboard under Book Details, or reply here with your new description text. Once submitted, our team pushes the revised metadata to retail channels, and the changes typically reflect on Amazon and Flipkart within 3–5 business days.\n\nPlease let us know if you would like us to review the description for you.\n\nTeam BookLeaf"
+  }
+]
