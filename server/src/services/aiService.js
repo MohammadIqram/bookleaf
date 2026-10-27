@@ -57,7 +57,13 @@ export class AiService {
       data: updatePayload,
       include: {
         book: { select: { id: true, title: true, isbn: true } },
-        author: { select: { id: true, name: true, email: true } },
+        author: {
+          select: {
+            id: true,
+            name: true,
+            user: { select: { email: true } },
+          },
+        },
       },
     });
 
