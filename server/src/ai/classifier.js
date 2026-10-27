@@ -48,7 +48,7 @@ export class Classifier {
       const response = await provider.complete({
         system: SYSTEM_PROMPT,
         messages: [{ role: 'user', content: prompt }],
-        maxTokens: 150,
+        maxTokens: 600,
         temperature: 0,
         json: true,
       });
@@ -74,7 +74,14 @@ export class Classifier {
         // Silently continue if audit log insert encounters network hiccup
       }
 
-      const parsedJson = JSON.parse(response.content);
+      // Robust JSON extraction (handles markdown code fences and whitespace)
+      let cleaned = (response.content || '').trim();
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        cleaned = jsonMatch[0];
+      }
+
+      const parsedJson = JSON.parse(cleaned);
       const validated = classifierOutputSchema.parse(parsedJson);
 
       return {

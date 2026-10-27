@@ -73,7 +73,11 @@ export class OpenAIProvider extends LLMProvider {
 
         const data = await response.json();
         const latencyMs = Date.now() - startTime;
-        const content = data.choices?.[0]?.message?.content || '';
+        const msg = data.choices?.[0]?.message;
+        let content = msg?.content || '';
+        if (!content && msg?.reasoning) {
+          content = msg.reasoning;
+        }
         const tokensIn = data.usage?.prompt_tokens || 0;
         const tokensOut = data.usage?.completion_tokens || 0;
 
