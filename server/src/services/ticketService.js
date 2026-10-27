@@ -57,7 +57,12 @@ export class TicketService {
           select: { id: true, title: true, isbn: true, status: true },
         },
         author: {
-          select: { id: true, authorCode: true, name: true, email: true },
+          select: {
+            id: true,
+            authorCode: true,
+            name: true,
+            user: { select: { email: true } },
+          },
         },
         messages: true,
       },
@@ -153,7 +158,12 @@ export class TicketService {
             select: { id: true, title: true, isbn: true, status: true },
           },
           author: {
-            select: { id: true, authorCode: true, name: true, email: true },
+            select: {
+              id: true,
+              authorCode: true,
+              name: true,
+              user: { select: { email: true } },
+            },
           },
           assignedAdmin: {
             select: { id: true, name: true, email: true },
@@ -202,8 +212,16 @@ export class TicketService {
         };
       }
 
+      const formattedAuthor = t.author
+        ? {
+            ...t.author,
+            email: t.author.user?.email || t.author.email || null,
+          }
+        : null;
+
       return {
         ...t,
+        author: formattedAuthor,
         ageHours,
         ageDays,
         isUrgent,
