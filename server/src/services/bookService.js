@@ -29,7 +29,9 @@ export class BookService {
             id: true,
             authorCode: true,
             name: true,
-            email: true,
+            user: {
+              select: { email: true },
+            },
           },
         },
       },
@@ -39,6 +41,12 @@ export class BookService {
     // Enhance books with calculation indicators (e.g. rollover notice)
     return books.map((book) => ({
       ...book,
+      author: book.author
+        ? {
+            ...book.author,
+            email: book.author.user?.email || null,
+          }
+        : null,
       isBelowPayoutThreshold: book.royaltyPending > 0 && book.royaltyPending < ROYALTY_PAYOUT_THRESHOLD_INR,
       rolloverNotice:
         book.royaltyPending > 0 && book.royaltyPending < ROYALTY_PAYOUT_THRESHOLD_INR
@@ -63,7 +71,9 @@ export class BookService {
             id: true,
             authorCode: true,
             name: true,
-            email: true,
+            user: {
+              select: { email: true },
+            },
           },
         },
         _count: {
@@ -83,6 +93,12 @@ export class BookService {
 
     return {
       ...book,
+      author: book.author
+        ? {
+            ...book.author,
+            email: book.author.user?.email || null,
+          }
+        : null,
       isBelowPayoutThreshold: book.royaltyPending > 0 && book.royaltyPending < ROYALTY_PAYOUT_THRESHOLD_INR,
       rolloverNotice:
         book.royaltyPending > 0 && book.royaltyPending < ROYALTY_PAYOUT_THRESHOLD_INR
